@@ -1,0 +1,9 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: trustvault
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: trustvault
+    ports:
+      - "5432:5432"
