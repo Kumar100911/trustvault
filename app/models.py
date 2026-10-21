@@ -6,7 +6,18 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
 
+from sqlalchemy import LargeBinary, String
+from sqlalchemy.orm import Mapped, mapped_column
 
+# (keep your existing models like User, Document, etc.)
+
+class FileBlob(Base):
+    """The actual file bytes. Only ever read through an authorised route."""
+    __tablename__ = "file_blobs"
+    
+    storage_key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    data: Mapped[bytes] = mapped_column(LargeBinary)
+    
 def utcnow():
     return datetime.now(timezone.utc)
 
