@@ -1,5 +1,3 @@
-How I used AI on this project, and where it was wrong.
-
 ## Reusable instructions I gave the AI
 - "Act as a trainer for a beginner who knows Python and LeetCode but not Git or web security. One step at a time, with a checkpoint after each."
 - "Every document route must go through one authorize() function. Default deny. Return 404, not 403."
