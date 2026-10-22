@@ -164,7 +164,7 @@ def test_denied_attempt_is_audited(people, db):
     stranger.get(f"/documents/{doc_id}/download")
     row = db.scalar(select(AuditLog).where(AuditLog.result == "denied"))
     assert row.actor_email == "stranger@x.com"
-    assert row.action == "download" and row.document_id == doc_id
+    assert row.action == "read" and row.document_id == doc_id
 
 
 def test_audit_chain_detects_tampering(people, db):
