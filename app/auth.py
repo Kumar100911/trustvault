@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import LoginSession, User
+from app.audit import write_audit
 
 COOKIE_NAME = "session"
 SESSION_HOURS = 8
@@ -90,15 +91,26 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User | 
         return None
     return user
 
+def refuse(db: Session, request: Request, user: User | None, status: int, message: str):
+    """Write a 'denied' row, then raise the HTTP error. Always raises."""
+    write_audit(db, user=user,
+                action="unauthenticated" if status == 401 else "forbidden",
+                result="denied", detail=f"{request.method} {request.url.path}",
+                ip=request.client.host if request.client else None)
+    db.commit()
+    raise HTTPException(status_code=status, detail=message)
 
-def require_user(user: User | None = Depends(get_current_user)) -> User:
+
+def require_user(request: Request, user: User | None = Depends(get_current_user),
+                 db: Session = Depends(get_db)) -> User:
     """Use this on any route that needs a logged-in person."""
     if user is None:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+        refuse(db, request, None, 401, "Not authenticated")
     return user
 
 
-def require_admin(user: User = Depends(require_user)) -> User:
+def require_admin(request: Request, user: User = Depends(require_user),
+                  db: Session = Depends(get_db)) -> User:
     if user.role != "admin":
-        raise HTTPException(status_code=403, detail="Admins only")
+        refuse(db, request, user, 403, "Admins only")
     return user

@@ -8,6 +8,7 @@ from app.db import Base
 
 from sqlalchemy import LargeBinary, String
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, Integer, Boolean, Text, DateTime, ForeignKey, Index, LargeBinary, text
 
 # (keep your existing models like User, Document, etc.)
 
@@ -56,6 +57,18 @@ class Document(Base):
 
 class Grant(Base):
     """One row = 'this user may do this permission on this document'."""
+    __table_args__ = (
+        Index("ix_grants_doc_user", "document_id", "user_id"),
+        # At most ONE active (not revoked) grant per person per document.
+        Index(
+            "uq_active_grant",
+            "document_id",
+            "user_id",
+            unique=True,
+            postgresql_where=text("revoked_at IS NULL"),
+            sqlite_where=text("revoked_at IS NULL"),
+        ),
+    )
     __tablename__ = "grants"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

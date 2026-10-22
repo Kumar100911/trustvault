@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app import storage
 from app.access import client_ip, load_and_authorize, visible_documents
 from app.audit import write_audit
-from app.auth import require_user
+from app.auth import refuse, require_user
 from app.config import MAX_UPLOAD_BYTES
 from app.db import get_db
 from app.models import Document, User, utcnow
@@ -23,9 +23,9 @@ def doc_out(d: Document) -> dict:
             "owner_id": d.owner_id, "created_at": d.created_at}
 
 
-def require_uploader(user: User = Depends(require_user)) -> User:
+def require_uploader(request: Request, user: User = Depends(require_user), db: Session = Depends(get_db)) -> User:
     if user.role != "owner":
-        raise HTTPException(403, "Only document owners can upload")
+        refuse(db, request, user, 403, "Only document owners can upload")
     return user
 
 

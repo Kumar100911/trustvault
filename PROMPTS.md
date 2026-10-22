@@ -1,5 +1,3 @@
-# PROMPTS.md — TrustVault AI Prompt History
-
 How I used AI on this project, and where it was wrong.
 
 ## Reusable instructions I gave the AI

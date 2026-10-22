@@ -63,3 +63,8 @@ def verify_chain(db: Session) -> tuple[bool, int | None]:
             return False, row.id
         prev = row.hash
     return True, None
+def check_anchor(db: Session, row_id: int, expected_hash: str) -> bool:
+    """True only if that exact row still exists with that exact fingerprint."""
+    db.expire_all()
+    row = db.get(AuditLog, row_id)
+    return row is not None and row.hash == expected_hash
