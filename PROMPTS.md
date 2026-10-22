@@ -37,26 +37,13 @@
 ## 2026-10-22 — Entry 5: Revocation design (Day 3)
 **Asked:** for a Day 3 plan covering grant and revoke.
 **Produced:** a plan saying revoking a grant "also deletes any sessions or tokens tied to that access".
-**Wrong:** sessions belong to the whole login, not to one document. Deleting them on every revoke would log people out of everything and protects nothing, because no per-document tokens exist. The real mechanism is that `authorize()` asks the database for an active grant on every request.
-**Fixed:** revoke only sets `revoked_at`. Sessions are deleted only when an admin disables an account. Proved by `test_revocation_takes_effect_on_the_very_next_request`.
-**Commit:** [f473384](https://github.com/kumar100911/trustvault/commit/f473384)
+**Wrong:** sessions belong to the whole login, not to one document. Deleting them on every revoke would log people out of everything, and it protects nothing, because no per-document tokens exist. The real mechanism is that authorize() asks the database for an active grant on every request.
+**Fixed:** revoke only sets revoked_at. Sessions are deleted only when an admin disables an account. Proved by test_revocation_takes_effect_on_the_very_next_request. 
+**Commit:** [af03537](https://github.com/kumar100911/trustvault/commit/af03537)
 
 ## 2026-10-22 — Entry 6: Half-saved admin actions (Day 3)
-**Asked:** for session code on Day 1, including `revoke_all_sessions()`.
+**Asked:** for sessions code on Day 1, including revoke_all_sessions().
 **Produced:** a helper that commits inside itself.
-**Wrong:** if disable-user used it, the account change, the session deletion and the audit row would be three separate commits. A crash between them could leave an account disabled with no log row, or logged with live sessions.
-**Fixed:** `disable_user` deletes sessions inline so all three changes are one transaction. Test: `test_disabling_a_user_cuts_their_session_at_once`.
-**Commit:** [f473384](https://github.com/kumar100911/trustvault/commit/f473384)
-
-## 2026-10-22 — Entry 7: Guard test used framework internals (Day 3)
-**Asked:** for a test that fails when a new document route is not covered by the access matrix.
-**Produced:** a test that walked `app.routes` and read internal route attributes.
-**Wrong:** with my newer FastAPI/Starlette it found zero routes (`0 == 7`). The idea was right but it depended on private structure.
-**Fixed:** it now reads the public `app.openapi()` paths and asserts the list is not empty. Verified by adding a fake route and watching it go red.
-**Commit:** [f473384](https://github.com/kumar100911/trustvault/commit/f473384)
-
-## 2026-10-22 — Entry 8: Mutation checks (Day 3)
-**Asked:** to break authorisation rules one at a time and see whether tests notice.
-**Result:** Verified all 7 mutations successfully triggered their respective failing tests (went red) and were safely restored using git.
-**Fixed:** All security rules are properly covered by tests; no gaps left un-tested.
-**Commit:** [f473384](https://github.com/kumar100911/trustvault/commit/f473384)
+**Wrong:** if disabling an account used it, the account change, the session deletion and the audit row would be three separate commits, so a crash between them could leave an account disabled with no log row, or logged with sessions still alive.
+**Fixed:** disable_user does the deletion inline so all three changes are one transaction. 
+**Commit:** [af03537](https://github.com/kumar100911/trustvault/commit/af03537)

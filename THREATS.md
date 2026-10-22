@@ -45,13 +45,27 @@ Status: DONE = fixed and tested, ACCEPTED = known weakness, PLANNED = will fix l
 |---|---|---|---|---|
 | 22 | Someone edits an old audit row | Each row stores a hash that includes the previous row's hash; verify_chain recomputes all | test_audit_chain_detects_tampering | DONE |
 | 23 | Fake log lines made with newlines in input | Control characters stripped from every logged value | covered by _clean | DONE |
-| 24 | Two requests write at once and fork the chain | Postgres advisory lock in write_audit | none (needs a Postgres test) | ACCEPTED, untested |
+| 24 | Two requests write at once and fork the chain | Postgres advisory lock in write_audit | test_concurrent_writers_keep_the_chain_valid | DONE (tested in CI) |
 | 25 | Denied attempts missing from the record | Denied document access is logged | test_denied_attempt_is_audited | DONE |
-| 26 | Anonymous (401) attempts not logged | Not logged yet | none | PLANNED (Day 3) |
-| 27 | Someone with database access deletes the newest rows | The chain alone cannot detect this | none | PLANNED (Day 3: DB trigger, saved head hash) |
+| 26 | Anonymous (401) attempts not logged | Logged via refuse() helper | test_anonymous_and_forbidden_attempts_are_audited | DONE |
+| 27 | Someone with database access deletes the newest rows | Saved head fingerprint in ANCHORS.md; verify checks it | test_saved_fingerprint_detects_deleted_newest_rows | DONE |
 | 28 | Client IP behind Render's proxy is the proxy's address | Spoofable headers are not trusted | none | ACCEPTED |
+| 29 | Revoking a grant through a different document’s URL | Grant must belong to the document in the URL | test_cannot_revoke_a_grant_through_a_different_document | DONE |
+| 30 | An editor or reader shares the document further | Sharing is the owner-only manage action | matrix: editor/reader → create_grant | DONE |
+| 31 | Revoked user keeps access | DB checked every request; no per-document links or tokens exist | test_revocation_takes_effect_on_the_very_next_request | DONE |
+| 32 | Download already in progress when revoked | File is sent as one response, so it may complete | none | ACCEPTED |
+| 33 | Two active grants from a race | Partial unique index; API returns 409 | test_two_active_grants_for_one_person_are_impossible | DONE |
+| 34 | Audit rows altered or deleted by a bug or injected SQL | DB trigger refuses UPDATE, DELETE, TRUNCATE | test_audit_rows_cannot_be_changed_deleted_or_truncated | DONE |
+| 35 | Newest audit rows deleted | Saved head fingerprint in ANCHORS.md; verify checks it | test_saved_fingerprint_detects_deleted_newest_rows | DONE, needs me to keep anchoring |
+| 36 | App connects as the DB owner, who can drop the trigger | Not fixed (a separate INSERT-only role would fix it) | none | ACCEPTED |
+| 37 | Disabled user keeps a session | Sessions deleted and is_active checked every request | test_disabling_a_user_cuts_their_session_at_once | DONE |
+| 38 | Last admin locked out | Admin cannot disable self | test_admin_cannot_disable_themselves_or_missing_users | DONE |
+| 39 | Non-admin reaches admin routes | require_admin, with refusals logged | test_only_admins_reach_admin_routes | DONE |
+| 40 | Owner discovers which emails exist (“No such user”) | Not fixed | none | ACCEPTED |
+| 41 | Re-enabled user gets old grants back | By design, and grants can be revoked first | none | ACCEPTED |
+| 42 | Anonymous requests flood the audit table | Not fixed yet | none | PLANNED (Day 4 rate limiting) |
+| 43 | A new route forgets the authorisation matrix | Test fails if a {doc_id} route is missing from the matrix | test_every_document_route_is_in_the_matrix | DONE |
 
 ## Not built, on purpose
-
 - Folder inheritance: it is how "access to one file" becomes "access to forty".
 - Sharing with people outside the company: not enough time to do it safely.
