@@ -1,16 +1,12 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import String, Integer, Boolean, Text, DateTime, ForeignKey, Index
+from sqlalchemy import (Boolean, DateTime, ForeignKey, Index, Integer,
+                        LargeBinary, String, Text, text)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
 
-from sqlalchemy import LargeBinary, String
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import String, Integer, Boolean, Text, DateTime, ForeignKey, Index, LargeBinary, text
-
-# (keep your existing models like User, Document, etc.)
 
 class FileBlob(Base):
     """The actual file bytes. Only ever read through an authorised route."""
@@ -80,7 +76,6 @@ class Grant(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # A grant is "active" only while revoked_at is empty.
-    __table_args__ = (Index("ix_grants_doc_user", "document_id", "user_id"),)
 
 
 class AuditLog(Base):
@@ -108,3 +103,15 @@ class LoginSession(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AiSuggestion(Base):
+    """A suggestion about who might get access. It grants NOTHING by itself:
+    a person must confirm it, and both steps are written to the audit log."""
+    __tablename__ = "ai_suggestions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), index=True)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    candidates: Mapped[str] = mapped_column(Text)  # JSON list of {email, permission, reason}
