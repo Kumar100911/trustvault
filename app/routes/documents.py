@@ -13,6 +13,11 @@ from app.config import MAX_UPLOAD_BYTES
 from app.db import get_db
 from app.models import Document, User, utcnow
 from app.uploads import clean_category, read_limited, sanitize_filename, validate_upload
+import os
+from datetime import date, datetime, time, timedelta, timezone
+
+from fastapi import (APIRouter, Depends, File, Form, HTTPException, Query, Request,
+                     Response, UploadFile)
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -20,7 +25,8 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 def doc_out(d: Document) -> dict:
     return {"id": d.id, "name": d.name, "category": d.category,
             "content_type": d.content_type, "size_bytes": d.size_bytes,
-            "owner_id": d.owner_id, "created_at": d.created_at}
+            "owner_id": d.owner_id, "owner_email": d.owner.email,
+            "created_at": d.created_at}
 
 
 def require_uploader(request: Request, user: User = Depends(require_user), db: Session = Depends(get_db)) -> User:
@@ -53,8 +59,38 @@ def upload(request: Request, file: UploadFile = File(...), category: str = Form(
 
 
 @router.get("")
-def list_documents(db: Session = Depends(get_db), user: User = Depends(require_user)):
-    docs = db.scalars(visible_documents(user).order_by(Document.created_at.desc())).all()
+def _like(text: str) -> str:
+    """Make % and _ in the user's text ordinary characters, not wildcards."""
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+@router.get("")
+def list_documents(
+        q: str | None = Query(None, max_length=100, description="part of the file name"),
+        owner_email: str | None = Query(None, max_length=255),
+        category: str | None = Query(None, max_length=100),
+        created_from: date | None = Query(None, description="YYYY-MM-DD, inclusive"),
+        created_to: date | None = Query(None, description="YYYY-MM-DD, inclusive"),
+        limit: int = Query(50, ge=1, le=100), offset: int = Query(0, ge=0, le=100000),
+        db: Session = Depends(get_db), user: User = Depends(require_user)):
+    """List/search. It starts from visible_documents(), so a document the person
+    may not read can never appear, whatever filters they send."""
+    query = visible_documents(user)
+    if q:
+        query = query.where(Document.name.ilike(f"%{_like(q.strip())}%", escape="\\"))
+    if category:
+        query = query.where(Document.category == clean_category(category))
+    if owner_email:
+        query = query.join(User, User.id == Document.owner_id).where(
+            User.email == owner_email.strip().lower())
+    if created_from:
+        query = query.where(Document.created_at >= datetime.combine(
+            created_from, time.min, tzinfo=timezone.utc))
+    if created_to:
+        query = query.where(Document.created_at < datetime.combine(
+            created_to + timedelta(days=1), time.min, tzinfo=timezone.utc))
+    docs = db.scalars(query.order_by(Document.created_at.desc(), Document.id)
+                      .limit(limit).offset(offset)).all()
     return [doc_out(d) for d in docs]
 
 
