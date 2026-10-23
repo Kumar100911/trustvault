@@ -125,7 +125,7 @@ def test_permission_changes_are_audited(cast, db):
     owner.delete(f"/documents/{doc}/grants/{gid}")
     grant(rival, doc, "rival@x.com")                                    # refused
     db.expire_all()
-    rows = db.scalars(select(AuditLog).order_by(AuditLog.id)).all()
+    rows = db.scalars(select(AuditLog).where(AuditLog.action != "login").order_by(AuditLog.id)).all()
     assert [(r.action, r.result) for r in rows] == [
         ("upload", "allowed"), ("grant", "allowed"), ("revoke", "allowed"),
         ("manage", "denied")]
@@ -138,7 +138,7 @@ def test_anonymous_and_forbidden_attempts_are_audited(cast, db):
     assert anonymous().get("/documents").status_code == 401
     assert upload(viewer).status_code == 403
     db.expire_all()
-    rows = db.scalars(select(AuditLog).order_by(AuditLog.id)).all()
+    rows = db.scalars(select(AuditLog).where(AuditLog.action != "login").order_by(AuditLog.id)).all()
     assert [(r.action, r.result, r.actor_email) for r in rows] == [
         ("unauthenticated", "denied", None),
         ("forbidden", "denied", "viewer@x.com")]

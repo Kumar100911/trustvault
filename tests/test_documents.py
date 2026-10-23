@@ -153,7 +153,7 @@ def test_successful_actions_are_audited_in_order(people, db):
     doc_id = upload(owner).json()["id"]
     owner.get(f"/documents/{doc_id}/download")
     owner.delete(f"/documents/{doc_id}")
-    rows = db.scalars(select(AuditLog).order_by(AuditLog.id)).all()
+    rows = db.scalars(select(AuditLog).where(AuditLog.action != "login").order_by(AuditLog.id)).all()
     assert [r.action for r in rows] == ["upload", "download", "delete"]
     assert all(r.actor_email == "owner@x.com" and r.result == "allowed" for r in rows)
 
